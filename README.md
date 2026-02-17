@@ -105,14 +105,8 @@ clonar o repositório "notes_front":
 cd notes_front
 npm install
 ```
-### 2️⃣ Criar arquivo .env
 
-Dentro de notes_front:
-```
-VITE_API_BASE=http://localhost:3000/api/v1
-```
-
-### 3️⃣ Executar aplicação
+### 2️⃣ Executar aplicação
 ```
 npm run dev
 ```
