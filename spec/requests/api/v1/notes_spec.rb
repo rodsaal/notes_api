@@ -1,35 +1,87 @@
-require "rails_helper"
+# frozen_string_literal: true
+require "swagger_helper"
 
 RSpec.describe "Api::V1::Notes", type: :request do
-  describe "GET /api/v1/notes" do
-    it "returns notes ordered by newest first" do
-      create(:note, title: "Old", created_at: 2.days.ago)
-      create(:note, title: "New", created_at: 1.day.ago)
+  path "/api/v1/notes" do
+    get "Lists notes ordered by newest first" do
+      tags "Notes"
+      produces "application/json"
 
-      get "/api/v1/notes"
+      response "200", "notes listed" do
+        schema type: :array,
+               items: {
+                 type: :object,
+                 properties: {
+                   id: { type: :integer },
+                   title: { type: :string },
+                   content: { type: :string, nullable: true },
+                   created_at: { type: :string, format: "date-time" },
+                   updated_at: { type: :string, format: "date-time" }
+                 },
+                 required: %w[id title created_at updated_at]
+               }
 
-      expect(response).to have_http_status(:ok)
-      json = JSON.parse(response.body)
-      expect(json.first["title"]).to eq("New")
+        before do
+          create(:note, title: "Old", created_at: 2.days.ago)
+          create(:note, title: "New", created_at: 1.day.ago)
+        end
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json.first["title"]).to eq("New")
+        end
+      end
     end
-  end
 
-  describe "POST /api/v1/notes" do
-    it "creates note with valid params" do
-      post "/api/v1/notes", params: { note: { title: "Meeting", content: "Next steps" } }
+    post "Creates a note" do
+      tags "Notes"
+      consumes "application/json"
+      produces "application/json"
 
-      expect(response).to have_http_status(:created)
-      expect(Note.count).to eq(1)
-    end
+      parameter name: :note, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          note: {
+            type: :object,
+            properties: {
+              title: { type: :string },
+              content: { type: :string, nullable: true }
+            },
+            required: ["title"]
+          }
+        },
+        required: ["note"]
+      }
 
-    it "returns 422 and errors when invalid" do
-      post "/api/v1/notes", params: { note: { title: "" } }
+      response "201", "note created" do
+        let(:note) { { note: { title: "Meeting", content: "Next steps" } } }
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      json = JSON.parse(response.body)
-      expect(json["errors"]["title"].join).to include("can't be blank")
+        run_test! do
+          expect(Note.count).to eq(1)
+        end
+      end
 
-      expect(Note.count).to eq(0)
+      response "422", "validation errors" do
+        let(:note) { { note: { title: "" } } }
+
+        schema type: :object,
+               properties: {
+                 errors: {
+                   type: :object,
+                   additionalProperties: {
+                     type: :array,
+                     items: { type: :string }
+                   }
+                 }
+               },
+               required: ["errors"]
+
+        run_test! do |response|
+          json = JSON.parse(response.body)
+          expect(json["errors"]["title"].join).to include("can't be blank")
+          expect(Note.count).to eq(0)
+        end
+      end
     end
   end
 end
