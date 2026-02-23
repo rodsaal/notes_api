@@ -1,19 +1,15 @@
 # frozen_string_literal: true
+
 module Api
   module V1
     class NotesController < ApplicationController
       def index
-        render json: Note.order(created_at: :desc), status: :ok
+        render json: Note.recent, status: :ok
       end
 
       def create
-        note = Note.new(note_params)
-
-        if note.save
-          render json: note, status: :created
-        else
-          render json: { errors: note.errors.to_hash(true) }, status: :unprocessable_entity
-        end
+        note = Note.create!(note_params)
+        render json: note, status: :created
       end
 
       private
